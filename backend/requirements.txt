@@ -3,4 +3,5 @@ flask
 flask-cors
 pymysql
 sqlalchemy  
-flask_sqlalchemy
+flask_sqlalchemy  
+Faker
