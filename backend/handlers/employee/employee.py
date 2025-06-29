@@ -103,22 +103,46 @@ def delete_employee(employee_id):
         session.close()
 
 # ✅ Get Subordinates - GET /employees/<manager_id>/subordinates
+# ✅ Get Subordinates - GET /employees/<manager_id>/subordinates
 def get_subordinates(manager_id):
     session = get_session()
     try:
         manager = session.query(Employee).get(manager_id)
         if not manager:
-            return jsonify({'error': 'Manager not found.'}), 404  # 🔴 Not Found
+            return jsonify({'error': 'Manager not found.'}), 404
 
         subordinates = manager.subordinates
-        return jsonify([
-            {
-                'id': sub.id,
-                'employee_name': sub.employee_name,
-                'email': sub.email,
-                'manager_id': sub.manager_id
-            } for sub in subordinates
-        ]), 200  # ✅ OK
+        return jsonify({
+            'manager_id': manager.id,
+            'manager_name': manager.employee_name,
+            'subordinates': [
+                {
+                    'id': sub.id,
+                    'employee_name': sub.employee_name,
+                    'email': sub.email,
+                    'manager_id': sub.manager_id
+                } for sub in subordinates
+            ]
+        }), 200
     finally:
         session.close()
+
+
+#get employees without manager 
+def get_employees_without_manager():
+    session=get_session()
+    try:
+        employees=session.query(Employee).filter(Employee.manager_id==None).all()
+        return jsonify([
+        {
+            'id': emp.id,
+            'employee_name': emp.employee_name,
+            'email': emp.email,
+            'manager_id': emp.manager_id
+        } for emp in employees
+        ]),200 # ✅ OK
+    finally:
+        session.close()
+
+
 # Note: The above functions assume that the Flask app and SQLAlchemy session management are properly set up.

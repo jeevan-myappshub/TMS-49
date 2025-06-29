@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from models.base import Base
 from sqlalchemy.sql import func
 
+
 class DailyLogChange(Base):
     __tablename__ = 'daily_log_changes'
 

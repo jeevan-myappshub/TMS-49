@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, Date, ForeignKey
 from sqlalchemy.orm import relationship, declarative_base
 from models.base import Base
+from models.employee import Employee  # Ensure this import exists
 
 class Timesheet(Base):
     __tablename__ = 'timesheets'
