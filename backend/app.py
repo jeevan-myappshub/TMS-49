@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from config.config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
 
-from handlers.employee.employee import (
+from handlers.employee.employees import (
     create_employee,
     get_employees,
     get_employee,

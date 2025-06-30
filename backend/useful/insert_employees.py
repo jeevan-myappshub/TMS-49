@@ -2,6 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from config.config import SQLALCHEMY_DATABASE_URI
 from models.employee import Employee
+from models.timesheet import Timesheet      # <-- Add this
+from models.dailylogs import DailyLog       # <-- Add this (optional, but good)
+from models.dailylogschanges import DailyLogChange  # <-- Add this (optional, but good)
 from models.base import Base
 from faker import Faker
 import random
@@ -17,7 +20,6 @@ employees = []
 for i in range(1, 51):
     employee_name = fake.name()
     email = fake.unique.email()
-    # Assign a random manager from already created employees (except for the first employee)
     manager_id = random.choice([emp.id for emp in employees]) if employees else None
     emp = Employee(
         employee_name=employee_name,
@@ -25,7 +27,7 @@ for i in range(1, 51):
         manager_id=manager_id
     )
     session.add(emp)
-    session.flush()  # Get the id of the newly added employee
+    session.flush()
     employees.append(emp)
 
 session.commit()

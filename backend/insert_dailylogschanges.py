@@ -3,7 +3,8 @@ from sqlalchemy.orm import sessionmaker
 from config.config import SQLALCHEMY_DATABASE_URI
 from models.dailylogschanges import DailyLogChange
 from models.dailylogs import DailyLog
-from models.base import Base
+from models.timesheet import Timesheet           # <-- Add this import
+from models.employee import Employee             # <-- Add this import
 from faker import Faker
 import random
 

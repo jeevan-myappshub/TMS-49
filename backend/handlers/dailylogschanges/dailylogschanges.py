@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from models.dailylogchanges import DailyLogChange
+from models.dailylogschanges import DailyLogChange
 from utils.session_manager import get_session
 from utils.helpers import sanitize_description
 

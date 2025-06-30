@@ -1,19 +1,28 @@
-from sqlalchemy import Column,Integer,String,ForeignKey,create_engine
-from sqlalchemy.orm import relationship,declarative_base,sessionmaker 
-from models.base import Base
+# ✅ Unified and Correct SQLAlchemy Model Structure for TMS Backend
+from sqlalchemy import Column, Integer, String, Date, Time, Text, DateTime, ForeignKey
+from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.sql import func
+from models.base import Base 
 
 
 class Employee(Base):
-    __tablename__ ='employees'
+    __tablename__ = 'employees'
 
-    id = Column(Integer,primary_key=True, autoincrement=True)
-    employee_name=Column(String(100),nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    employee_name = Column(String(100), nullable=False)
     email = Column(String(100), nullable=False, unique=True)
     manager_id = Column(Integer, ForeignKey('employees.id'), nullable=True)
+
+    # Self-referencing manager relationship
     manager = relationship('Employee', remote_side=[id], backref='subordinates')
 
+    # Relationship to Timesheet
+    timesheets = relationship(
+        'Timesheet',
+        back_populates='employee',
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
+
     def as_dict(self):
-        """ convert orm object to dictionary """
-        return {column.name:getattr(self,column.name) for column in self.__table__.columns}
-
-
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}

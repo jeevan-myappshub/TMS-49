@@ -3,6 +3,8 @@ from sqlalchemy.orm import sessionmaker
 from config.config import SQLALCHEMY_DATABASE_URI
 from models.timesheet import Timesheet
 from models.employee import Employee
+from models.dailylogs import DailyLog           # <-- Add this import
+from models.dailylogschanges import DailyLogChange  # <-- Add this import
 from faker import Faker
 import random
 
@@ -19,7 +21,7 @@ if not employees:
     exit()
 
 # Insert 100 fake timesheets
-for _ in range(100):
+for _ in range(50):
     employee = random.choice(employees)
     week_starting = fake.date_between(start_date="-1y", end_date="today")
     timesheet = Timesheet(
@@ -29,6 +31,6 @@ for _ in range(100):
     session.add(timesheet)
 
 session.commit()
-print("Inserted 100 random timesheet records.")
+print("Inserted 50 random timesheet records.")
 
 session.close()

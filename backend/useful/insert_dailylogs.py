@@ -3,6 +3,8 @@ from sqlalchemy.orm import sessionmaker
 from config.config import SQLALCHEMY_DATABASE_URI
 from models.dailylogs import DailyLog
 from models.timesheet import Timesheet
+from models.employee import Employee              # <-- Add this import
+from models.dailylogschanges import DailyLogChange  # <-- Add this import
 from faker import Faker
 import random
 from datetime import timedelta
@@ -46,7 +48,7 @@ for _ in range(200):
         afternoon_in=afternoon_in,
         afternoon_out=afternoon_out,
         total_hours=total_hours,
-        descreption=description
+        description=description  
     )
     session.add(log)
 
