@@ -2,9 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from config.config import SQLALCHEMY_DATABASE_URI
 from models.employee import Employee
-from models.timesheet import Timesheet      # <-- Add this
-from models.dailylogs import DailyLog       # <-- Add this (optional, but good)
-from models.dailylogschanges import DailyLogChange  # <-- Add this (optional, but good)
+from models.timesheet import Timesheet
+from models.dailylogs import DailyLog
+from models.dailylogschanges import DailyLogChange
 from models.base import Base
 from faker import Faker
 import random
@@ -20,17 +20,17 @@ employees = []
 for i in range(1, 51):
     employee_name = fake.name()
     email = fake.unique.email()
-    manager_id = random.choice([emp.id for emp in employees]) if employees else None
+    reports_to = random.choice([emp.id for emp in employees]) if employees else None
     emp = Employee(
         employee_name=employee_name,
         email=email,
-        manager_id=manager_id
+        reports_to=reports_to
     )
     session.add(emp)
     session.flush()
     employees.append(emp)
 
 session.commit()
-print("Inserted 50 random employee records with managers.")
+print("Inserted 50 random employee records with hierarchy (reports_to).")
 
 session.close()

@@ -10,7 +10,8 @@ from handlers.employee.employees import (
     update_employee,
     delete_employee,
     get_subordinates,
-    get_employees_without_manager
+    get_employees_without_manager,
+    get_manager_hirerarchy
 )
 from handlers.timesheet.timesheet import (
     create_timesheet,
@@ -67,6 +68,9 @@ def list_subordinates(manager_id): return get_subordinates(manager_id)
 
 @app.route("/api/employees/without-manager", methods=["GET"])
 def list_employees_without_manager(): return get_employees_without_manager()
+
+@app.route("/api/employees/<int:employee_id>/manager-hierarchy", methods=["GET"])
+def manager_hierarchy(employee_id): return get_manager_hirerarchy(employee_id)
 
 # Timesheet Endpoints
 @app.route("/api/timesheets", methods=["POST"])
