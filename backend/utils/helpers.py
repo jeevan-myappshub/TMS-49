@@ -49,3 +49,26 @@ def format_datetime(dt):
     if dt is None:
         return None
     return dt.isoformat()
+
+def safe_close(session):
+    try:
+        session.close()
+    except:
+        pass
+
+def calculate_total_hours(time_in_am, time_out_am, time_in_pm, time_out_pm):
+    total_seconds = 0
+    try:
+        if time_in_am and time_out_am:
+            in_am = datetime.strptime(time_in_am, '%H:%M')
+            out_am = datetime.strptime(time_out_am, '%H:%M')
+            total_seconds += (out_am - in_am).seconds
+        if time_in_pm and time_out_pm:
+            in_pm = datetime.strptime(time_in_pm, '%H:%M')
+            out_pm = datetime.strptime(time_out_pm, '%H:%M')
+            total_seconds += (out_pm - in_pm).seconds
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        return f"{hours}:{minutes:02d}"
+    except ValueError:
+        return "0:00"

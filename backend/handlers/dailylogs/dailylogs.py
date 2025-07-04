@@ -2,7 +2,7 @@ from flask import request, jsonify
 from datetime import datetime
 from models.dailylogs import DailyLog
 from utils.session_manager import get_session
-from utils.helpers import calculate_total_hours, format_timedelta_to_time, get_day_of_week
+from utils.helpers import calculate_total_hours, format_timedelta_to_time, get_day_of_week, safe_close
 
 # Create daily log - POST /dailylogs
 def create_daily_log():
@@ -14,7 +14,11 @@ def create_daily_log():
             if not data.get(field):
                 return jsonify({'error': f'{field} is required'}), 400
 
-        log_date = datetime.strptime(data['log_date'], "%Y-%m-%d").date()
+        try:
+            log_date = datetime.strptime(data['log_date'], "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({'error': 'Invalid log_date format. Use YYYY-MM-DD.'}), 400
+
         day_of_week = get_day_of_week(log_date)
 
         morning_in = data.get('morning_in')
@@ -23,10 +27,13 @@ def create_daily_log():
         afternoon_out = data.get('afternoon_out')
 
         fmt = "%H:%M"
-        morning_in = datetime.strptime(morning_in, fmt).time() if morning_in else None
-        morning_out = datetime.strptime(morning_out, fmt).time() if morning_out else None
-        afternoon_in = datetime.strptime(afternoon_in, fmt).time() if afternoon_in else None
-        afternoon_out = datetime.strptime(afternoon_out, fmt).time() if afternoon_out else None
+        try:
+            morning_in = datetime.strptime(morning_in, fmt).time() if morning_in else None
+            morning_out = datetime.strptime(morning_out, fmt).time() if morning_out else None
+            afternoon_in = datetime.strptime(afternoon_in, fmt).time() if afternoon_in else None
+            afternoon_out = datetime.strptime(afternoon_out, fmt).time() if afternoon_out else None
+        except ValueError:
+            return jsonify({'error': 'Invalid time format. Use HH:MM.'}), 400
 
         total_td = calculate_total_hours(morning_in, morning_out, afternoon_in, afternoon_out)
         total_time_str = format_timedelta_to_time(total_td)
@@ -40,13 +47,16 @@ def create_daily_log():
             afternoon_in=afternoon_in,
             afternoon_out=afternoon_out,
             total_hours=total_time_str,
-            descreption=data.get('descreption')
+            description=data.get('description')
         )
         session.add(log)
         session.commit()
         return jsonify(log.as_dict()), 201
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
-        session.close()
+        safe_close(session)
 
 # Get all daily logs - GET /dailylogs
 def get_daily_logs():
@@ -54,8 +64,10 @@ def get_daily_logs():
     try:
         logs = session.query(DailyLog).all()
         return jsonify([log.as_dict() for log in logs]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     finally:
-        session.close()
+        safe_close(session)
 
 # Get daily log by ID - GET /dailylogs/<id>
 def get_daily_log(log_id):
@@ -65,8 +77,10 @@ def get_daily_log(log_id):
         if not log:
             return jsonify({'error': 'Daily log not found'}), 404
         return jsonify(log.as_dict()), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     finally:
-        session.close()
+        safe_close(session)
 
 # Update daily log - PUT /dailylogs/<id>
 def update_daily_log(log_id):
@@ -78,30 +92,39 @@ def update_daily_log(log_id):
 
         data = request.get_json()
         if 'log_date' in data:
-            log.log_date = datetime.strptime(data['log_date'], "%Y-%m-%d").date()
-            log.day_of_week = get_day_of_week(log.log_date)
+            try:
+                log.log_date = datetime.strptime(data['log_date'], "%Y-%m-%d").date()
+                log.day_of_week = get_day_of_week(log.log_date)
+            except ValueError:
+                return jsonify({'error': 'Invalid log_date format. Use YYYY-MM-DD.'}), 400
 
         fmt = "%H:%M"
-        if 'morning_in' in data:
-            log.morning_in = datetime.strptime(data['morning_in'], fmt).time() if data['morning_in'] else None
-        if 'morning_out' in data:
-            log.morning_out = datetime.strptime(data['morning_out'], fmt).time() if data['morning_out'] else None
-        if 'afternoon_in' in data:
-            log.afternoon_in = datetime.strptime(data['afternoon_in'], fmt).time() if data['afternoon_in'] else None
-        if 'afternoon_out' in data:
-            log.afternoon_out = datetime.strptime(data['afternoon_out'], fmt).time() if data['afternoon_out'] else None
+        try:
+            if 'morning_in' in data:
+                log.morning_in = datetime.strptime(data['morning_in'], fmt).time() if data['morning_in'] else None
+            if 'morning_out' in data:
+                log.morning_out = datetime.strptime(data['morning_out'], fmt).time() if data['morning_out'] else None
+            if 'afternoon_in' in data:
+                log.afternoon_in = datetime.strptime(data['afternoon_in'], fmt).time() if data['afternoon_in'] else None
+            if 'afternoon_out' in data:
+                log.afternoon_out = datetime.strptime(data['afternoon_out'], fmt).time() if data['afternoon_out'] else None
+        except ValueError:
+            return jsonify({'error': 'Invalid time format. Use HH:MM.'}), 400
 
         # Recalculate total hours
         total_td = calculate_total_hours(log.morning_in, log.morning_out, log.afternoon_in, log.afternoon_out)
         log.total_hours = format_timedelta_to_time(total_td)
 
-        if 'descreption' in data:
-            log.descreption = data['descreption']
+        if 'description' in data:
+            log.description = data['description']
 
         session.commit()
         return jsonify(log.as_dict()), 200
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
-        session.close()
+        safe_close(session)
 
 # Delete daily log - DELETE /dailylogs/<id>
 def delete_daily_log(log_id):
@@ -113,8 +136,11 @@ def delete_daily_log(log_id):
         session.delete(log)
         session.commit()
         return jsonify({'message': 'Daily log deleted successfully.'}), 200
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
     finally:
-        session.close()
+        safe_close(session)
 
 # Get daily logs by timesheet - GET /timesheets/<timesheet_id>/dailylogs
 def get_daily_logs_by_timesheet(timesheet_id):
@@ -122,5 +148,7 @@ def get_daily_logs_by_timesheet(timesheet_id):
     try:
         logs = session.query(DailyLog).filter_by(timesheet_id=timesheet_id).all()
         return jsonify([log.as_dict() for log in logs]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     finally:
-        session.close()
+        safe_close(session)

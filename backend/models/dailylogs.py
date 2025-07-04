@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, Date, String, Time, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from models.base import Base
 
+
 class DailyLog(Base):
     __tablename__ = 'daily_logs'
 

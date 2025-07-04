@@ -3,7 +3,7 @@ from config.config import SQLALCHEMY_DATABASE_URI
 from models.base import Base
 
 # Import all your models so Base knows about them
-import models.employee
+import backend.models.employee
 import models.timesheet
 import models.dailylogs
 import models.dailylogschanges

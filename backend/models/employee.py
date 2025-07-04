@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from models.base import Base
 
 class Employee(Base):
@@ -10,12 +10,8 @@ class Employee(Base):
     email = Column(String(100), nullable=False, unique=True)
     reports_to = Column(Integer, ForeignKey('employees.id', ondelete="SET NULL"), nullable=True)
 
-    # Self-referencing manager relationship
-    manager = relationship(
-        'Employee',
-        remote_side=[id],
-        backref='subordinates'
-    )
+    # Self-referencing relationship: manager and subordinates
+    manager = relationship('Employee', remote_side=[id], backref=backref('subordinates', lazy='dynamic'))
 
     # Relationship to Timesheet
     timesheets = relationship(

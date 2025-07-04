@@ -3,11 +3,10 @@ from sqlalchemy.orm import sessionmaker
 from config.config import SQLALCHEMY_DATABASE_URI
 from models.dailylogs import DailyLog
 from models.timesheet import Timesheet
-from models.employee import Employee              # <-- Add this import
-from models.dailylogschanges import DailyLogChange  # <-- Add this import
+from models.dailylogschanges import DailyLogChange
 from faker import Faker
 import random
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 # Create engine and session
 engine = create_engine(SQLALCHEMY_DATABASE_URI)
@@ -21,11 +20,11 @@ if not timesheets:
     print("No timesheets found. Please insert timesheets first.")
     exit()
 
-# Helper to get a random time in the day
+# Helper to get a random time in the day (returns datetime.time)
 def random_time(start_hour=8, end_hour=18):
     hour = random.randint(start_hour, end_hour)
     minute = random.choice([0, 15, 30, 45])
-    return f"{hour:02d}:{minute:02d}"
+    return datetime.strptime(f"{hour:02d}:{minute:02d}", "%H:%M").time()
 
 # Insert 200 fake daily logs
 for _ in range(200):
@@ -35,7 +34,15 @@ for _ in range(200):
     morning_out = random_time(11, 12)
     afternoon_in = random_time(13, 14)
     afternoon_out = random_time(16, 18)
-    total_hours = f"{random.randint(7, 9)}:00"
+    # Calculate total hours as timedelta
+    total_seconds = 0
+    if morning_in and morning_out:
+        total_seconds += (datetime.combine(log_date, morning_out) - datetime.combine(log_date, morning_in)).seconds
+    if afternoon_in and afternoon_out:
+        total_seconds += (datetime.combine(log_date, afternoon_out) - datetime.combine(log_date, afternoon_in)).seconds
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    total_hours = datetime.strptime(f"{hours:02d}:{minutes:02d}", "%H:%M").time()
     description = fake.sentence(nb_words=10)
     day_of_week = log_date.strftime("%A")
 
@@ -48,7 +55,7 @@ for _ in range(200):
         afternoon_in=afternoon_in,
         afternoon_out=afternoon_out,
         total_hours=total_hours,
-        description=description  
+        description=description
     )
     session.add(log)
 
