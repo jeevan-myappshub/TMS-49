@@ -303,10 +303,10 @@ def get_employee_dashboard():
                 if timesheet_ids:
                     logs = session.query(DailyLog).filter(
                         DailyLog.timesheet_id.in_(timesheet_ids),
-                        DailyLog.date >= week_start,
-                        DailyLog.date <= week_end
+                        DailyLog.log_date >= week_start,
+                        DailyLog.log_date <= week_end
                     ).all()
-                    daily_logs_data = [log.as_dict() for log in logs]
+                    daily_logs_data = [log.as_dict() for log in logs] 
             except ValueError:
                 return jsonify({'error': 'Invalid week_starting format. Use MM/DD/YYYY.'}), 400
         else:

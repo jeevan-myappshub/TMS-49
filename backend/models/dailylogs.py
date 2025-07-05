@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, Date, String, Time, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from models.base import Base
 
+from models.base import Base
+from models.dailylogschanges import DailyLogChange  # <-- Add this line
 
 class DailyLog(Base):
     __tablename__ = 'daily_logs'
@@ -29,4 +30,12 @@ class DailyLog(Base):
     )
 
     def as_dict(self):
-        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+        result = {}
+        for column in self.__table__.columns:
+            value = getattr(self, column.name)
+            # Convert time and date objects to string
+            if hasattr(value, 'isoformat'):
+                result[column.name] = value.isoformat()
+            else:
+                result[column.name] = value
+        return result

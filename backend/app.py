@@ -5,6 +5,10 @@ from config.config import SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATION
 from datetime import datetime, timedelta
 from utils.helpers import calculate_total_hours, safe_close
 from utils.session_manager import get_session
+from models.employee import Employee
+from models.timesheet import Timesheet
+from models.dailylogs import DailyLog
+from models.dailylogschanges import DailyLogChange
 
 # Import employee handlers
 from handlers.employee.employees import (
@@ -70,9 +74,9 @@ def add_employee():
 def list_employees():
     return get_employees()
 
-@app.route("/api/employees/by-email", methods=["GET"])
-def get_employee_by_email_route():
-    return get_employee_by_email()
+# @app.route("/api/employees/by-email", methods=["GET"])
+# def get_employee_by_email_route():
+#     return get_employee_by_email()
 
 @app.route("/api/employees/update-by-email", methods=["PUT"])
 def update_employee_by_email_route():
@@ -82,9 +86,9 @@ def update_employee_by_email_route():
 def delete_employee_by_email_route():
     return delete_employee_by_email()
 
-@app.route("/api/employees/manager-hierarchy-by-email", methods=["GET"])
-def get_manager_hierarchy_by_email_route():
-    return get_manager_hierarchy_by_email()
+# @app.route("/api/employees/manager-hierarchy-by-email", methods=["GET"])
+# def get_manager_hierarchy_by_email_route():
+#     return get_manager_hierarchy_by_email()
 
 @app.route("/api/employees/<int:manager_id>/subordinates", methods=["GET"])
 def list_subordinates(manager_id):
@@ -102,6 +106,43 @@ def employee_tree(employee_id):
 def employee_dashboard():
     return get_employee_dashboard()
 
+@app.route("/api/employees/manager-hierarchy-by-email", methods=["GET"])
+def get_manager_hierarchy_by_email():
+    email = request.args.get('email')
+    session = get_session()
+    try:
+        emp = session.query(Employee).filter(Employee.email.ilike(email)).first()
+        if not emp:
+            return jsonify({'error': 'Employee not found.'}), 404
+        hierarchy = []
+        current = emp
+        while current.reports_to:
+            manager = session.query(Employee).get(current.reports_to)
+            if not manager:
+                break
+            hierarchy.append({
+                'id': manager.id,
+                'employee_name': manager.employee_name,
+                'email': manager.email,
+                'reports_to': manager.reports_to
+            })
+            current = manager
+        return jsonify(hierarchy), 200
+    finally:
+        safe_close(session)
+
+@app.route("/api/employees/by-email", methods=["GET"])
+def get_employee_by_email():
+    email = request.args.get('email')
+    session = get_session()
+    try:
+        emp = session.query(Employee).filter(Employee.email.ilike(email)).first()
+        if not emp:
+            return jsonify({'error': 'Employee not found.'}), 404
+        return jsonify(emp.as_dict()), 200
+    finally:
+        safe_close(session)
+        
 # ---------------- Timesheet Routes ----------------
 @app.route("/api/timesheets", methods=["POST"])
 def add_timesheet():
