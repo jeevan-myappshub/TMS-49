@@ -3,7 +3,7 @@ import datetime
 from sqlalchemy.orm import sessionmaker
 from config.config import SQLALCHEMY_DATABASE_URI
 from models.timesheet import Timesheet
-from backend.models.employee import Employee
+from models.employee import Employee
 from models.dailylogs import DailyLog           # <-- Add this import
 from models.dailylogschanges import DailyLogChange  # <-- Add this import
 from faker import Faker
@@ -26,8 +26,14 @@ if not employees:
 for _ in range(50):
     employee = random.choice(employees)
     random_date = fake.date_between(start_date="-1y", end_date="today")
-    # Ensure week_starting is always a Monday
     week_starting = random_date - datetime.timedelta(days=random_date.weekday())
+    # Check for existing timesheet for this employee and week
+    exists = session.query(Timesheet).filter_by(
+        employee_id=employee.id,
+        week_starting=week_starting
+    ).first()
+    if exists:
+        continue  # Skip duplicates
     timesheet = Timesheet(
         employee_id=employee.id,
         week_starting=week_starting

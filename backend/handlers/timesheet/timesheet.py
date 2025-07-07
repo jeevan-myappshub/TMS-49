@@ -25,6 +25,15 @@ def create_timesheet():
         if not employee:
             return jsonify({"error": "Employee not found"}), 404
 
+        # --- Check for existing timesheet ---
+        existing_ts = session.query(Timesheet).filter_by(
+            employee_id=employee.id,
+            week_starting=week_starting_date
+        ).first()
+        if existing_ts:
+            return jsonify(existing_ts.as_dict()), 200  # Already exists, return it
+
+        # --- Create new timesheet ---
         new_ts = Timesheet(employee_id=employee.id, week_starting=week_starting_date)
         session.add(new_ts)
         session.commit()

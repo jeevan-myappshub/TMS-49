@@ -3,7 +3,7 @@ from models.dailylogschanges import DailyLogChange
 from utils.session_manager import get_session
 from utils.helpers import sanitize_description, safe_close
 
-# Create a change - POST /dailylogchanges
+## Create a change - POST /dailylogchanges
 def add_log_change():
     session = get_session()
     try:

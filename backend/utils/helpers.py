@@ -2,8 +2,6 @@ from datetime import datetime,timedelta,date
 import re
 
 
-
-
 def is_valid_email(email):
     """Check if the email is valid using regex.
     """
@@ -53,3 +51,16 @@ def format_timedelta_to_time(td):
     hours = total_seconds // 3600
     minutes = (total_seconds % 3600) // 60
     return f"{hours}:{minutes:02d}"
+
+def parse_time(time_str):
+    if not time_str:
+        return None
+    try:
+        return datetime.strptime(time_str, '%H:%M').time()  # <-- FIXED
+    except ValueError:
+        raise ValueError('Invalid time format. Use HH:MM.')
+    
+def validate_time(time_str):
+    if not time_str:
+        return True  # Allow null/empty
+    return bool(re.match(r'^\d{2}:\d{2}$', time_str))

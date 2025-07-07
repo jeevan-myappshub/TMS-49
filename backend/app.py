@@ -14,10 +14,10 @@ from models.dailylogschanges import DailyLogChange
 from handlers.employee.employees import (
     create_employee,
     get_employees,
-    get_employee_by_email,
+    # get_employee_by_email,
     update_employee_by_email,
     delete_employee_by_email,
-    get_manager_hierarchy_by_email,
+    #  get_manager_hierarchy_by_email,
     get_subordinates,
     get_employees_without_manager,
     get_employee_tree,
@@ -106,14 +106,54 @@ def employee_tree(employee_id):
 def employee_dashboard():
     return get_employee_dashboard()
 
-@app.route("/api/employees/manager-hierarchy-by-email", methods=["GET"])
-def get_manager_hierarchy_by_email():
+# @app.route("/api/employees/manager-hierarchy-by-email", methods=["GET"])
+# def get_manager_hierarchy_by_email():
+#     email = request.args.get('email')
+#     session = get_session()
+#     try:
+#         emp = session.query(Employee).filter(Employee.email.ilike(email)).first()
+#         if not emp:
+#             return jsonify({'error': 'Employee not found.'}), 404
+#         hierarchy = []
+#         current = emp
+#         while current.reports_to:
+#             manager = session.query(Employee).get(current.reports_to)
+#             if not manager:
+#                 break
+#             hierarchy.append({
+#                 'id': manager.id,
+#                 'employee_name': manager.employee_name,
+#                 'email': manager.email,
+#                 'reports_to': manager.reports_to
+#             })
+#             current = manager
+#         return jsonify(hierarchy), 200
+#     finally:
+#         safe_close(session)
+
+# @app.route("/api/employees/by-email", methods=["GET"])
+# def get_employee_by_email():
+#     email = request.args.get('email')
+#     session = get_session()
+#     try:
+#         emp = session.query(Employee).filter(Employee.email.ilike(email)).first()
+#         if not emp:
+#             return jsonify({'error': 'Employee not found.'}), 404
+#         return jsonify(emp.as_dict()), 200
+#     finally:
+#         safe_close(session)
+
+
+@app.route("/api/employees/profile-with-hierarchy", methods=["GET"])
+def get_employee_profile_with_hierarchy():
     email = request.args.get('email')
     session = get_session()
     try:
         emp = session.query(Employee).filter(Employee.email.ilike(email)).first()
         if not emp:
             return jsonify({'error': 'Employee not found.'}), 404
+
+        # Build manager hierarchy
         hierarchy = []
         current = emp
         while current.reports_to:
@@ -127,21 +167,14 @@ def get_manager_hierarchy_by_email():
                 'reports_to': manager.reports_to
             })
             current = manager
-        return jsonify(hierarchy), 200
+
+        return jsonify({
+            'employee': emp.as_dict(),
+            'manager_hierarchy': hierarchy
+        }), 200
     finally:
         safe_close(session)
 
-@app.route("/api/employees/by-email", methods=["GET"])
-def get_employee_by_email():
-    email = request.args.get('email')
-    session = get_session()
-    try:
-        emp = session.query(Employee).filter(Employee.email.ilike(email)).first()
-        if not emp:
-            return jsonify({'error': 'Employee not found.'}), 404
-        return jsonify(emp.as_dict()), 200
-    finally:
-        safe_close(session)
         
 # ---------------- Timesheet Routes ----------------
 @app.route("/api/timesheets", methods=["POST"])

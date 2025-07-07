@@ -92,6 +92,7 @@ const HierarchyTree = ({ hierarchy, currentEmployee }) => {
   );
 };
 
+
 export default function Home() {
   const [employee, setEmployee] = useState(null);
   const [managerHierarchy, setManagerHierarchy] = useState([]);
@@ -155,7 +156,7 @@ export default function Home() {
     fetchProfileWithHierarchy();
   }, []);
 
-  // --- handleSaveWeek ---
+  // Save week: check if timesheet exists, create if not, fetch logs
   const handleSaveWeek = async () => {
     if (!employee?.employee_name || !isValidDate(weekStarting)) {
       toast.error("Please select a valid week starting date.");
@@ -163,25 +164,23 @@ export default function Home() {
     }
     setLoading(true);
     try {
-      let timesheet;
-      // Try to get timesheet
-      let timesheetRes = await fetch(
-        `${BASE_URL}/api/timesheets/by-employee-name-week?employee_name=${encodeURIComponent(
-          employee.employee_name
-        )}&week_starting=${encodeURIComponent(weekStarting)}`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
-        }
-      );
+      // Check if timesheet exists
+      const checkUrl = `${BASE_URL}/api/timesheets/by-employee-name-week?employee_name=${encodeURIComponent(
+        employee.employee_name
+      )}&week_starting=${encodeURIComponent(weekStarting)}`;
+      let timesheetRes = await fetch(checkUrl, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
 
+      let timesheet;
       if (timesheetRes.ok) {
         timesheet = await timesheetRes.json();
         setTimesheetId(timesheet.id);
         toast.info("Week already exists. Showing records.");
-      } else if (timesheetRes.status === 404) {
-        // If not found, create timesheet (do not show error)
+      } else {
+        // Create timesheet
         const createRes = await fetch(`${BASE_URL}/api/timesheets`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -197,13 +196,9 @@ export default function Home() {
         timesheet = await createRes.json();
         setTimesheetId(timesheet.id);
         toast.success("Week starting date saved successfully!");
-      } else {
-        // Other errors (not 404)
-        const err = await timesheetRes.json();
-        throw new Error(err.error || "Failed to fetch timesheet.");
       }
 
-      // Fetch daily logs for this timesheet
+      // Fetch daily logs
       const logsUrl = `${BASE_URL}/api/daily-logs?timesheet_id=${timesheet.id}`;
       const logsRes = await fetch(logsUrl, {
         method: "GET",
@@ -216,7 +211,7 @@ export default function Home() {
       }
       setDailyLogs(logsData);
 
-      // Prepare logs map (always show all days)
+      // Prepare logs map
       const logsMap = {};
       logsData.forEach((log) => {
         const dateKey = toMMDDYYYY(log.log_date);
@@ -255,12 +250,12 @@ export default function Home() {
       setLoading(false);
     }
   };
-
   function formatTotalHours(total) {
-    if (!total) return "0:00";
-    const parts = total.split(":");
-    return `${parseInt(parts[0], 10)}:${parts[1]}`;
-  }
+  if (!total) return "0:00";
+  // Handles "08:00:00" or "8:00:00" or "8:00"
+  const parts = total.split(":");
+  return `${parseInt(parts[0], 10)}:${parts[1]}`;
+}
 
   // Calculate total hours
   const calculateTotalHours = (log) => {
@@ -334,7 +329,7 @@ export default function Home() {
     }));
   };
 
-  // Save individual log (CORRECTED: check for existing log in JS, not via API)
+  // Save individual log
   const handleSaveLog = async (dateKey) => {
     const log = editedLogs[dateKey];
     if (!log || !employee?.id || !timesheetId) {
@@ -345,12 +340,24 @@ export default function Home() {
     try {
       let logId = log.id;
       let isNewLog = typeof logId === "string" && logId.startsWith("temp-");
-      // Find if log exists for this date in dailyLogs
-      const existingLog = dailyLogs.find((l) => toMMDDYYYY(l.log_date) === dateKey);
-      if (existingLog) {
-        logId = existingLog.id;
-        isNewLog = false;
-        toast.info("Log already exists. Updating instead.");
+      let originalLog = dailyLogs.find((l) => toMMDDYYYY(l.log_date) === dateKey);
+
+      // Check if log exists for this date
+      if (isNewLog) {
+        const checkUrl = `${BASE_URL}/api/daily-logs/by-date?timesheet_id=${timesheetId}&log_date=${encodeURIComponent(
+          toYYYYMMDDfromMMDD(dateKey)
+        )}`;
+        const checkRes = await fetch(checkUrl, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        });
+        if (checkRes.ok) {
+          const existingLog = await checkRes.json();
+          logId = existingLog.id;
+          isNewLog = false;
+          toast.info("Log already exists. Updating instead.");
+        }
       }
 
       const payload = {
@@ -382,6 +389,17 @@ export default function Home() {
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || `Failed to ${isNewLog ? "create" : "update"} daily log.`);
+      }
+
+      if (!isNewLog && originalLog && log.description && log.description !== originalLog.description) {
+        await fetch(`${BASE_URL}/api/daily-log-changes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            daily_log_id: logId,
+            new_description: log.description,
+          }),
+        });
       }
 
       toast.success("Log saved successfully!");
@@ -605,9 +623,15 @@ export default function Home() {
                                   type="time"
                                   value={log.time_in_am || ""}
                                   onChange={(e) =>
-                                    handleTimeChange(dateKey, "time_in_am", e.target.value)
+                                    handleTimeChange(
+                                      dateKey,
+                                      "time_in_am",
+                                      e.target.value
+                                    )
                                   }
-                                  onFocus={() => handleTimeInputFocus(dateKey, "time_in_am")}
+                                  onFocus={() =>
+                                    handleTimeInputFocus(dateKey, "time_in_am")
+                                  }
                                 />
                               </TableCell>
                               <TableCell className="border">
@@ -615,9 +639,15 @@ export default function Home() {
                                   type="time"
                                   value={log.time_out_am || ""}
                                   onChange={(e) =>
-                                    handleTimeChange(dateKey, "time_out_am", e.target.value)
+                                    handleTimeChange(
+                                      dateKey,
+                                      "time_out_am",
+                                      e.target.value
+                                    )
                                   }
-                                  onFocus={() => handleTimeInputFocus(dateKey, "time_out_am")}
+                                  onFocus={() =>
+                                    handleTimeInputFocus(dateKey, "time_out_am")
+                                  }
                                 />
                               </TableCell>
                               <TableCell className="border">
@@ -625,9 +655,15 @@ export default function Home() {
                                   type="time"
                                   value={log.time_in_pm || ""}
                                   onChange={(e) =>
-                                    handleTimeChange(dateKey, "time_in_pm", e.target.value)
+                                    handleTimeChange(
+                                      dateKey,
+                                      "time_in_pm",
+                                      e.target.value
+                                    )
                                   }
-                                  onFocus={() => handleTimeInputFocus(dateKey, "time_in_pm")}
+                                  onFocus={() =>
+                                    handleTimeInputFocus(dateKey, "time_in_pm")
+                                  }
                                 />
                               </TableCell>
                               <TableCell className="border">
@@ -635,15 +671,23 @@ export default function Home() {
                                   type="time"
                                   value={log.time_out_pm || ""}
                                   onChange={(e) =>
-                                    handleTimeChange(dateKey, "time_out_pm", e.target.value)
+                                    handleTimeChange(
+                                      dateKey,
+                                      "time_out_pm",
+                                      e.target.value
+                                    )
                                   }
-                                  onFocus={() => handleTimeInputFocus(dateKey, "time_out_pm")}
+                                  onFocus={() =>
+                                    handleTimeInputFocus(dateKey, "time_out_pm")
+                                  }
                                 />
                               </TableCell>
                               <TableCell className="border">
                                 <Input
                                   value={log.description || ""}
-                                  onChange={(e) => handleDescriptionChange(dateKey, e.target.value)}
+                                  onChange={(e) =>
+                                    handleDescriptionChange(dateKey, e.target.value)
+                                  }
                                 />
                               </TableCell>
                               <TableCell className="border">
